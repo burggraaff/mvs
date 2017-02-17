@@ -481,10 +481,6 @@ def ascctable(ASCC):
 
 def readdata(ASCC):
     ASCC = str(ASCC)
-    #try:
-    #    badnight = np.loadtxt("/disks/strw1/burggraaff/msc/Mascara/badnights.txt")
-    #except IOError:
-    #    badnight = []
     ts = []
     len_total = 0
     for camera, symbol in zip(("N", "S", "E", "W", "C"), symbols):
