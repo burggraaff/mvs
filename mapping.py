@@ -1,11 +1,20 @@
 import numpy as np
+from warnings import warn
 
 try:
     from parmap import map as parmap, starmap
     parallel = True
 except ImportError:
     parallel = False
-    print "Did not find `parmap` package -- will not use multiprocessing!"
+    warn("Did not find `parmap` package -- will not use multiprocessing!", ImportWarning)
+
+def disable_multiprocessing():
+    global parallel
+    parallel = False
+
+def enable_multiprocessing():
+    global parallel
+    parallel = True
 
 def pmap_nopar(func, iterable, *args, **kwargs):
     """
@@ -63,7 +72,7 @@ if parallel:
             res = np.array(res)
         return res
 
-def map_single(func, iterable, par = True, *args, **kwargs):
+def map_single(func, iterable, *args, **kwargs):
     """
     Map a function over one iterable, using multiprocessing if possible.
     If multiprocessing is not available (cannot import `parmap` module) or disabled (`par = False`), equivalent to a list comprehension.
@@ -89,7 +98,7 @@ def map_single(func, iterable, par = True, *args, **kwargs):
         result of calling pmap_par or pmap_nopar with given parameters:
         res = pmap_x(func, iterable, *args, **kwargs)
     """
-    if par and parallel:
+    if parallel:
         res = pmap_par  (func, iterable, *args, **kwargs)
     else:
         res = pmap_nopar(func, iterable, *args, **kwargs)
