@@ -89,7 +89,7 @@ def find_N_strongest_periods(GLS, n = 1, astable = True):
     ----------
     GLS: array-like
         table with periods and power.
-        if an astropy.table.table.Table instance, assume it has keys "p" and "Power".
+        if an astropy.table.table.Table instance, assume it has keys "period" and "power".
         else, try to convert it to that format.
     n: int, optional
         number of periods to find.
@@ -154,7 +154,7 @@ def find_strongest_unique_period(GLS, *periods_to_avoid):
     ----------
     GLS: array-like
         table with periods and power.
-        if an astropy.table.table.Table instance, assume it has keys "p" and "Power".
+        if an astropy.table.table.Table instance, assume it has keys "period" and "power".
         else, try to convert it to that format.
     periods_to_avoid: float(s)
         periods whose aliases should be avoided
