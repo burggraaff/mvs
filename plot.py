@@ -73,7 +73,7 @@ def make_ylim(y, mag = True, zoom = False):
         ylim = (ymin, ymax)
     return ylim
 
-def gls_one(GLS, y_linlog = "log", x_linlog = "log", highlight = None, title = "Generalised Lomb-Scargle Periodogram", grid = True, axes_kwargs = {}, line_kwargs = {}, **figure_kwargs):
+def gls_one(GLS, y_linlog = "log", x_linlog = "log", frequency = False, highlight = None, title = "Generalised Lomb-Scargle Periodogram", grid = True, axes_kwargs = {}, line_kwargs = {}, **figure_kwargs):
     """
     Plot a given GLS
 
@@ -86,6 +86,9 @@ def gls_one(GLS, y_linlog = "log", x_linlog = "log", highlight = None, title = "
         If "log", plot on a logarithmic y-scale. If "lin", linear.
     x_linlog: str, optional
         If "log", plot on a logarithmic x-scale. If "lin", linear.
+    frequency: boolean, optional
+        If False, use period as x-axis. If True, use frequency.
+        Default: False
     highlight: float, optional
         Highlight a certain area with a red square.
         Default: None
@@ -119,9 +122,10 @@ def gls_one(GLS, y_linlog = "log", x_linlog = "log", highlight = None, title = "
 
     x_linlog = "linear" if x_linlog == "lin" else "log"
     y_linlog = "linear" if y_linlog == "lin" else "log"
+    default_xlabel = "Frequency (days$^{-1}$)" if frequency else "Period (days)"
     default_ylim = (0, 1) if y_linlog == "linear" else (1e-5, 1)
     default_xlim = (GLS["period"].min(), GLS["period"].max())
-    ax_kw = {"xlabel": "Period (days)", "ylabel": "Power", "title": title, "xscale": x_linlog, "yscale": y_linlog, "ylim": default_ylim, "xlim": default_xlim}
+    ax_kw = {"xlabel": default_xlabel, "ylabel": "Power", "title": title, "xscale": x_linlog, "yscale": y_linlog, "ylim": default_ylim, "xlim": default_xlim}
     ax_kw.update(axes_kwargs)
 
     l_kw  = {"color": "black", "lw": '1'}
@@ -129,7 +133,11 @@ def gls_one(GLS, y_linlog = "log", x_linlog = "log", highlight = None, title = "
 
     fig, ax = plt.subplots(subplot_kw = ax_kw, **f_kw)
     ax.tick_params(axis = "x", which = "both", direction = "out", length = 10, top = "off")
-    ax.plot(GLS["period"], GLS["power"], **l_kw)
+
+    period_or_frequency = GLS["frequency"] if frequency else GLS["period"]
+    power = GLS["power"]
+
+    ax.plot(period_or_frequency, power, **l_kw)
 
     if highlight is not None:
         ax.axvspan(0.9 * highlight, 1.1 * highlight, color = "red", alpha = 0.5, zorder = 0)
@@ -139,7 +147,7 @@ def gls_one(GLS, y_linlog = "log", x_linlog = "log", highlight = None, title = "
 
     return fig, ax
 
-def gls_both(GLS, x_linlog = "log", highlight = None, title = "Generalised Lomb-Scargle Periodogram", grid = True, ylims=((0, 1), (1e-5, 1)), axes_kwargs = {}, line_kwargs = {}, **figure_kwargs):
+def gls_both(GLS, x_linlog = "log", frequency = False, highlight = None, title = "Generalised Lomb-Scargle Periodogram", grid = True, ylims=((0, 1), (1e-5, 1)), axes_kwargs = {}, line_kwargs = {}, **figure_kwargs):
     """
     Plot a given GLS with linear *and* logarithmic y axes
 
@@ -150,6 +158,9 @@ def gls_both(GLS, x_linlog = "log", highlight = None, title = "Generalised Lomb-
         If you want to plot a GLS in a different format, please use the mvs.plot.gls wrapper function
     x_linlog: str, optional
         If "log", plot on a logarithmic x-scale. If "lin", linear.
+    frequency: boolean, optional
+        If False, use period as x-axis. If True, use frequency.
+        Default: False
     highlight: float, optional
         Highlight a certain area with a red square.
         Default: None
@@ -189,7 +200,8 @@ def gls_both(GLS, x_linlog = "log", highlight = None, title = "Generalised Lomb-
     l_kw.update(line_kwargs)
 
     default_xlim = (GLS["period"].min(), GLS["period"].max())
-    ax_kw = {"xlabel": "Period (days)", "ylabel": "Power", "xscale": x_linlog, "xlim": default_xlim}
+    default_xlabel = "Frequency (days$^{-1}$)" if frequency else "Period (days)"
+    ax_kw = {"xlabel": default_xlabel, "ylabel": "Power", "xscale": x_linlog, "xlim": default_xlim}
     ax_kw.update(axes_kwargs)
     xlabel = ax_kw.pop("xlabel") # only want this on the lower plot
 
@@ -198,8 +210,11 @@ def gls_both(GLS, x_linlog = "log", highlight = None, title = "Generalised Lomb-
     axs[1].tick_params(axis='x', which="both", direction="out", length=10, top="off")
     axs[1].set_xlabel(xlabel)
 
+    period_or_frequency = GLS["frequency"] if frequency else GLS["period"]
+    power = GLS["power"]
+
     for ax in axs:
-        ax.plot(GLS["period"], GLS["power"], **l_kw)
+        ax.plot(period_or_frequency, power, **l_kw)
         if highlight is not None:
             ax.axvspan(0.9 * highlight, 1.1 * highlight, color = "red", alpha = 0.5, zorder = 0)
         if grid:
@@ -213,7 +228,7 @@ def gls_both(GLS, x_linlog = "log", highlight = None, title = "Generalised Lomb-
 
     return fig, axs
 
-def gls(GLS, mode = "log", saveto = None, save_kwargs = {}, return_fig_axs = False, **kwargs):
+def gls(GLS, mode = "log", frequency = False, saveto = None, save_kwargs = {}, return_fig_axs = False, **kwargs):
     """
     Wrapper for plotting GLS
 
@@ -227,6 +242,9 @@ def gls(GLS, mode = "log", saveto = None, save_kwargs = {}, return_fig_axs = Fal
         If "log", make one plot with a logarithmic y-axis.
         If "both", make a plot that has both of the above.
         Default: "log"
+    frequency: boolean, optional
+        If False, use period as x-axis. If True, use frequency.
+        Default: False
     saveto: str, optional
         Where to save the figure. Figure is shown if None.
         Default: None
@@ -252,11 +270,16 @@ def gls(GLS, mode = "log", saveto = None, save_kwargs = {}, return_fig_axs = Fal
     mode = mode.lower()
     assert mode in ("lin", "log", "both"), "mvs.plot.gls expects a value of `lin`, `log`, or `both` for the parameter `mode`; instead got `{0}`".format(mode)
     GLS_ = convert_gls_array_to_table(GLS)
-    GLS.sort("period")
-    if mode == "both":
-        fig, ax = gls_both(GLS_, **kwargs)
+    if frequency:
+        if "frequency" not in GLS_.keys():
+            GLS.add_column(data = 1./GLS_["period"], name = "frequency")
+        GLS_.sort("frequency")
     else:
-        fig, ax = gls_one(GLS_, y_linlog = mode, **kwargs)
+        GLS_.sort("period")
+    if mode == "both":
+        fig, ax = gls_both(GLS_, frequency = frequency, **kwargs)
+    else:
+        fig, ax = gls_one(GLS_, y_linlog = mode, frequency = frequency, **kwargs)
     save_show(saveto, fig, **save_kwargs)
     if return_fig_axs:
         return fig, ax
