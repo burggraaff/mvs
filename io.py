@@ -9,7 +9,7 @@ try:
     from PyAstronomy.pyasl import helio_jd
     HJD = True
 except ImportError:
-    warn("Could not import pyastronomy -- will use regular Julian Dates rather than Heliocentric", ImportWarning)
+    warn("Could not import PyAstronomy -- will use regular Julian Dates rather than Heliocentric", ImportWarning)
     HJD = False
 
 cameras = ("N", "W", "E", "S", "C")
