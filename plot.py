@@ -120,11 +120,14 @@ def gls_one(GLS, y_linlog = "log", x_linlog = "log", frequency = False, highligh
     f_kw = {"tight_layout": True, "figsize": (20, 15)}
     f_kw.update(figure_kwargs)
 
+    period_or_frequency = GLS["frequency"] if frequency else GLS["period"]
+    power = GLS["power"]
+
     x_linlog = "linear" if x_linlog == "lin" else "log"
     y_linlog = "linear" if y_linlog == "lin" else "log"
     default_xlabel = "Frequency (days$^{-1}$)" if frequency else "Period (days)"
     default_ylim = (0, 1) if y_linlog == "linear" else (1e-5, 1)
-    default_xlim = (GLS["period"].min(), GLS["period"].max())
+    default_xlim = (period_or_frequency.min(), period_or_frequency.max())
     ax_kw = {"xlabel": default_xlabel, "ylabel": "Power", "title": title, "xscale": x_linlog, "yscale": y_linlog, "ylim": default_ylim, "xlim": default_xlim}
     ax_kw.update(axes_kwargs)
 
@@ -133,9 +136,6 @@ def gls_one(GLS, y_linlog = "log", x_linlog = "log", frequency = False, highligh
 
     fig, ax = plt.subplots(subplot_kw = ax_kw, **f_kw)
     ax.tick_params(axis = "x", which = "both", direction = "out", length = 10, top = "off")
-
-    period_or_frequency = GLS["frequency"] if frequency else GLS["period"]
-    power = GLS["power"]
 
     ax.plot(period_or_frequency, power, **l_kw)
 
@@ -199,7 +199,10 @@ def gls_both(GLS, x_linlog = "log", frequency = False, highlight = None, title =
     l_kw  = {"color": "black", "lw": "1"}
     l_kw.update(line_kwargs)
 
-    default_xlim = (GLS["period"].min(), GLS["period"].max())
+    period_or_frequency = GLS["frequency"] if frequency else GLS["period"]
+    power = GLS["power"]
+
+    default_xlim = (period_or_frequency.min(), period_or_frequency.max())
     default_xlabel = "Frequency (days$^{-1}$)" if frequency else "Period (days)"
     ax_kw = {"xlabel": default_xlabel, "ylabel": "Power", "xscale": x_linlog, "xlim": default_xlim}
     ax_kw.update(axes_kwargs)
@@ -209,9 +212,6 @@ def gls_both(GLS, x_linlog = "log", frequency = False, highlight = None, title =
     axs[0].tick_params(axis='x', labelbottom="off") # no labels on horizontal axis for top plot
     axs[1].tick_params(axis='x', which="both", direction="out", length=10, top="off")
     axs[1].set_xlabel(xlabel)
-
-    period_or_frequency = GLS["frequency"] if frequency else GLS["period"]
-    power = GLS["power"]
 
     for ax in axs:
         ax.plot(period_or_frequency, power, **l_kw)
