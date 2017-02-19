@@ -54,12 +54,45 @@ def period_with_error(low, best, high, latex=False):
             return p_str+" +"+h_str+" -"+l_str
 
 class Star(object):
+    """
+    Class that represents a star, with information useful for other operations.
+
+    Parameters
+    ----------
+    (for the __init__ method)
+
+    ascc:
+        ASCC number
+    ra: float
+        Right Ascension in degrees
+    dec: float
+        Declination in degrees
+    spectype: str
+        Spectral type
+    B: float
+        B-magnitude
+    V: float
+        V-magnitude
+
+    The values given to __init__ can later be recalled, e.g.
+    >>> s = Star(425414, 25., 25., "F5", 8., 8.)
+    >>> print s.B
+    8.
+    >>> print s.spectype
+    F5
+
+    All parameters can be seen at once by simply printing the object:
+    >>> s = Star(425414, 25., 25., "F5", 8., 8.)
+    >>> print s
+    Star ASCC 425414 at coordinates (25.00; 25.00); spectral type F5; B = 8.0 and V = 8.0
+    """
+
     def __init__(self, ascc, ra, dec, spectype, B, V):
         self.ascc = int(ascc)
-        self.ra = ra
-        self.dec = dec
+        self.ra = float(ra)
+        self.dec = float(dec)
         self.spectype = spectype
-        self.B = B
-        self.V = V
+        self.B = float(B)
+        self.V = float(V)
     def __repr__(self):
         return "Star ASCC {0} at coordinates ({1:.2f}; {2:.2f}); spectral type {3}; B = {4} and V = {5}".format(self.ascc, self.ra, self.dec, self.spectype, self.B, self.V)
