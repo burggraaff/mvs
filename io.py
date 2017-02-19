@@ -1,11 +1,12 @@
 from warnings import warn
+from .misc import Star
 import h5py
 from astropy.io.ascii import read
 from astropy import table
 from scipy.misc import imread
 import numpy as np
 try:
-    from pyastronomy.pyasl import helio_jd
+    from PyAstronomy.pyasl import helio_jd
     HJD = True
 except ImportError:
     warn("Could not import pyastronomy -- will use regular Julian Dates rather than Heliocentric", ImportWarning)
@@ -13,9 +14,51 @@ except ImportError:
 
 cameras = ("N", "W", "E", "S", "C")
 
-def read_hdf5_to_table_for_one_star(filename, ASCC, keys, force = False):
+def create_star_from_hdf5_files(ASCC, filenames, force = False):
+    ASCC = str(ASCC)
+    for f in filenames:
+        l = h5py.File(f, 'r')
+        header = l["header"]
+        try:
+            index = np.where(header["ascc"][:] == ASCC)[0][0]
+            ra = header["ra"][index]
+            dec = header["dec"][index]
+            spectype = header["spectype"][index]
+            B = header["bmag"][index]
+            V = header["vmag"][index]
+            star = Star(ASCC, ra, dec, spectype, B, V)
+            break
+        except IndexError:
+            if force:
+                continue
+            else:
+                raise ValueError("Could not find the star ASCC {0} in the file {1}. Consider re-running with `force = True`.".format(ASCC, filenames))
+        finally:
+            l.close()
+    try:
+        return star
+    except NameError:
+        raise ValueError("Could not find the star ASCC {0} in any of the given files: {1}".format(ASCC, filenames))
+
+def which_camera(filename):
+    try:
+        letter = filename.split(".")[0].split("LP")[1]
+    except:
+        letter = "?"
+    if letter not in ("N", "S", "E", "W", "C"):
+        letter = "?"
+    return letter
+
+def read_filenames_from_text_file(textfilename):
+    with open(textfilename, 'r') as f:
+        filenames = f.readlines()
+        filenames = [F.strip() for F in filenames]
+    return filenames
+
+def read_hdf5_to_table_for_one_star(filename, ASCC, keys = ("jdmid", "mag0", "emag0", "nobs", "lst"), force = False):
     assert len(keys), "mvs.io.read_hdf5_to_table_for_one_star: did not receive any keys to parse"
     # assert the keys are in the table
+    ASCC = str(ASCC)
     try:
         l = h5py.File(filename, 'r')
     except IOError:
@@ -39,18 +82,23 @@ def read_hdf5_to_table_for_one_star(filename, ASCC, keys, force = False):
     l.close()
     return t
 
-def read_multiple_hdf5s_for_one_star(ASCC, force = True, keys = ("jdmid", "mag0", "emag0", "nobs", "lst"), time = "jdmid", mag = "mag0", emag = "emag0", add_cameraname = True, min_nr_points = 250, min_nobs = 50, *filenames):
-    # camera name ?
-    assert time in keys, "mvs.io.read_multiple_hdf5s_for_one_star: key for time (`{0}`) not in keys: {1}".format(time, keys)
-    assert mag in keys, "mvs.io.read_multiple_hdf5s_for_one_star: key for mag (`{0}`) not in keys: {1}".format(mag, keys)
-    table_tuples = [("a", read_hdf5_to_table_for_one_star(filename, ASCC, keys, force = force)) for filename in filenames]
+def read_all_data_for_one_star(filenames, ASCC, force = True, keys = ("jdmid", "mag0", "emag0", "nobs", "lst"), time = "jdmid", mag = "mag0", emag = "emag0", add_cameraname = True, min_nr_points = 250, min_nobs = 50):
+    assert time in keys, "mvs.io.read_all_data_for_one_star: key for time (`{0}`) not in keys: {1}".format(time, keys)
+    assert mag in keys, "mvs.io.read_all_data_for_one_star: key for mag (`{0}`) not in keys: {1}".format(mag, keys)
+
+    ASCC = str(ASCC)
+    star = create_star_from_hdf5_files(ASCC, filenames, force = force)
+
+    table_tuples = [(which_camera(filename), read_hdf5_to_table_for_one_star(filename, ASCC, keys, force = force)) for filename in filenames]
     table_tuples = [tup for tup in table_tuples if tup[1] is not None]
-    assert len(table_tuples), "mvs.io.read_multiple_hdf5s_for_one_star: No data for star ASCC {0} found".format(ASCC)
+    assert len(table_tuples), "mvs.io.read_all_data_for_one_star: No data for star ASCC {0} found".format(ASCC)
+
     for letter, t in table_tuples:
         letter_col = table.Column([letter] * len(t), name = "camera", dtype = str)
         t.add_column(letter_col)
     only_tables = zip(*table_tuples)[1]
     full_table = table.vstack(only_tables)
+
     if "nobs" in keys:
         below_min = np.where(full_table["nobs"] < min_nobs)[0]
         full_table.remove_rows(below_min)
@@ -64,73 +112,12 @@ def read_multiple_hdf5s_for_one_star(ASCC, force = True, keys = ("jdmid", "mag0"
         which = np.where(full_table["camera"] == c)[0]
         if len(which) < min_nr_points:
             full_table.remove_rows(which)
+    if any(full_table[time] > 2.4e6):
+        full_table[time] -= 2.4e6
     if HJD:
-        t[time] = helio_jd(t[time])
+        full_table[time] = [helio_jd(jd, star.ra, star.dec) for jd in full_table[time]]
+        full_table.rename_column(time, "HJD")
+        time = "HJD"
+
     full_table.sort(time)
-    return full_table
-
-def readdata(ASCC):
-    ASCC = str(ASCC)
-    ts = []
-    len_total = 0
-    for camera, symbol in zip(("N", "S", "E", "W", "C"), symbols):
-        for Z in quarters:
-            try:
-                l = h5py.File("data/red0_vmag_201"+Z+"LP"+camera+".hdf5", 'r')
-            except IOError:
-                continue
-            try:
-                alldata = l["data"][ASCC]
-            except KeyError:
-                l.close()
-                continue
-            len_total += len(alldata["jdmid"])
-#            if len(alldata["jdmid"]) < 250:
-#                # if there is insufficient (lst) coverage to accurately
-#                # calibrate this camera with the others
-#                continue
-            t = T.Table()
-            for key in ("jdmid", "mag0", "emag0", "nobs", "lst"):
-                t.add_column(T.Column(alldata[key], name=key))
-
-            l.close()
-            t.rename_column("mag0", "mag")
-            t.rename_column("emag0", "emag")
-            t.remove_rows(np.where(t["emag"] == 0.0)[0])
-            t.remove_rows(np.where(t["nobs"] < 50))
-            if len(t) == 0: # if no data is left over, go to the next file
-                continue
-            t["emag"] /= np.sqrt(t["nobs"])
-            t.remove_column("nobs")
-            t["jdmid"] -= startdate
-            try:
-                info = ascctable(ASCC)
-                t["jdmid"] = map(lambda jd: pyasl.helio_jd(float(jd), info["RA"], info["Dec"]), t["jdmid"])
-            except IndexError:
-                t["jdmid"] = map(float, t["jdmid"])
-            t = t[-np.isnan(t['mag'])]
-#            if len(t) < nobs_cutoff:
-#                print ""
-#                continue
-#            if len(t) < 250:
-#                continue
-            t.add_column(T.Column(whatnight(t["jdmid"]), name="night"))
-            #if len(badnight) > 0:
-            #    t.remove_rows(np.concatenate([np.where(t["night"] == i)[0] for i in badnight]))
-
-            t.add_column(T.Column(data=[symbol]*len(t), name="sym", dtype=str))
-
-            ts.append(t)
-    if len(ts) == 0:
-        raise ValueError("No data found for star ASCC "+ASCC)
-    t = T.vstack(ts)
-    for symbol in symbols:
-        where_this = np.where(t["sym"] == symbol)[0]
-        if len(where_this) < 250: # remove if only a few from this camera
-        # because you cannot properly detrend if there's only a small nr of points
-            t.remove_rows(where_this)
-    t.sort("jdmid")
-    if len(t) < 250:
-        raise ValueError("Light curve only contains "+str(len(t))+" points")
-    print "original length:", len_total
-    return t
+    return star, full_table

@@ -52,3 +52,14 @@ def period_with_error(low, best, high, latex=False):
             return r"$"+p_str+r"^{+"+h_str+r"}_{-"+l_str+"}$"
         else:
             return p_str+" +"+h_str+" -"+l_str
+
+class Star(object):
+    def __init__(self, ascc, ra, dec, spectype, B, V):
+        self.ascc = int(ascc)
+        self.ra = ra
+        self.dec = dec
+        self.spectype = spectype
+        self.B = B
+        self.V = V
+    def __repr__(self):
+        return "Star ASCC {0} at coordinates ({1:.2f}; {2:.2f}); spectral type {3}; B = {4} and V = {5}".format(self.ascc, self.ra, self.dec, self.spectype, self.B, self.V)

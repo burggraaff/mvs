@@ -2,7 +2,7 @@ from . import periods
 from .periods import gls_full as gls
 
 from . import io
-from .io import read_multiple_hdf5s_for_one_star as readdata
+from .io import read_filenames_from_text_file as read_filenames, read_all_data_for_one_star as read_data
 
 from . import mapping
 
