@@ -45,7 +45,7 @@ def which_camera(filename):
         letter = filename.split(".")[0].split("LP")[1]
     except:
         letter = "?"
-    if letter not in ("N", "S", "E", "W", "C"):
+    if letter not in cameras:
         letter = "?"
     return letter
 
@@ -121,3 +121,8 @@ def read_all_data_for_one_star(filenames, ASCC, force = True, keys = ("jdmid", "
 
     full_table.sort(time)
     return star, full_table
+
+def write_data_table(data_table, filename, format="ascii.fixed_width", **kwargs):
+    data_table.write(filename, format = format, **kwargs)
+
+read_data_table = read
