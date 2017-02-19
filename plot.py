@@ -283,3 +283,39 @@ def gls(GLS, mode = "log", frequency = False, saveto = None, save_kwargs = {}, r
     save_show(saveto, fig, **save_kwargs)
     if return_fig_axs:
         return fig, ax
+
+def points_simple(x, y, ax, xerr = None, yerr = None, color = "black", cmap = plt.cm.jet, **kwargs):
+    """
+    Make a simple plot of x, y data points (and errors if available) in a given axes object
+    This is primarily a helper function, you probably don't want to use it on its own.
+
+    Parameters
+    ----------
+    x: array-like
+        Horizontal axis data (e.g. time, phase)
+    y: array-like
+        Vertical axis data ()
+    ax: matplotlib.axes._axes.Axes
+        Axes object to plot into
+    xerr: array-like, optional
+        Horizontal axis errors
+        Default: None
+    yerr: array-like, optional
+        Vertical axis errors
+        Default: None
+    color: str or array-like, optional
+        Colour(s) to use for the points
+        If str, one colour for all.
+        If array-like, use a colourmap.
+        N.B. The errorbars are always black.
+        Default: "black"
+    cmap: matplotlib.colors.LinearSegmentedColormap, optional
+        The colourmap to use if color is array-like.
+        Does nothing if color is a string.
+        Default: plt.cm.jet
+    **kwargs:
+        Keyword arguments for ax.scatter
+    """
+    ax.scatter(x, y, color = color, cmap = cmap, **kwargs)
+    if xerr is not None or yerr is not None:
+        ax.errorbar(x, y, xerr=xerr, yerr=yerr, fmt="none", ecolor = "black", zorder = 0, **kwargs)
