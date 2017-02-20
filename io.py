@@ -1,5 +1,5 @@
 from warnings import warn
-from .misc import Star
+from .misc import Star, cameras
 import h5py
 from astropy.io.ascii import read
 from astropy import table
@@ -11,8 +11,6 @@ try:
 except ImportError:
     warn("Could not import PyAstronomy -- will use regular Julian Dates rather than Heliocentric", ImportWarning)
     HJD = False
-
-cameras = ("N", "W", "E", "S", "C")
 
 def create_star_from_hdf5_files(ASCC, filenames, force = True):
     """

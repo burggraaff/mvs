@@ -8,8 +8,11 @@ from matplotlib.patches import Circle, Wedge
 from matplotlib.collections import PatchCollection
 
 from .tables import convert_gls_array_to_table
+from .misc import cameras
 
-def save_show(saveto = None, fig = None, **kwargs):
+symbol_map = {'N': '^', 'S': 'v', 'E': 'D', 'W': 's', 'C': 'd', "?": 'o'}
+
+def _save_show(saveto = None, fig = None, **kwargs):
     """
     Save a plot or show it
 
@@ -73,7 +76,7 @@ def make_ylim(y, mag = True, zoom = False):
         ylim = (ymin, ymax)
     return ylim
 
-def gls_one(GLS, y_linlog = "log", x_linlog = "log", frequency = False, highlight = None, title = "Generalised Lomb-Scargle Periodogram", grid = True, axes_kwargs = {}, line_kwargs = {}, **figure_kwargs):
+def gls_one(GLS, y_linlog = "log", x_linlog = "log", frequency = False, highlight = None, title = "Generalised Lomb-Scargle Periodogram", grid = True, figure_kwargs = {}, line_kwargs = {}, **axes_kwargs):
     """
     Plot a given GLS
 
@@ -98,17 +101,17 @@ def gls_one(GLS, y_linlog = "log", x_linlog = "log", frequency = False, highligh
     grid: boolean, optional
         Whether or not to add a grid to the plot
         Default: True
-    axes_kwargs: dict, optional
-        Keyword arguments for the axes object.
-        e.g. xlabel, ylabel, xlim, ylim, ...
-        Default: {}
+    figure_kwargs: dict, optional
+        Keyword arguments for the figure object.
+        e.g. tight_layout, figsize, ...
     line_kwargs: dict, optional
         Keyword arguments for the line object.
         e.g. ls, lw, color, ...
         Default: {}
-    **figure_kwargs:
-        Keyword arguments for the figure object.
-        e.g. tight_layout, figsize, ...
+    **axes_kwargs:
+        Keyword arguments for the axes object.
+        e.g. xlabel, ylabel, xlim, ylim, ...
+        Default: {}
 
     Returns
     -------
@@ -147,7 +150,7 @@ def gls_one(GLS, y_linlog = "log", x_linlog = "log", frequency = False, highligh
 
     return fig, ax
 
-def gls_both(GLS, x_linlog = "log", frequency = False, highlight = None, title = "Generalised Lomb-Scargle Periodogram", grid = True, ylims=((0, 1), (1e-5, 1)), axes_kwargs = {}, line_kwargs = {}, **figure_kwargs):
+def gls_both(GLS, x_linlog = "log", frequency = False, highlight = None, title = "Generalised Lomb-Scargle Periodogram", grid = True, ylims=((0, 1), (1e-5, 1)), figure_kwargs = {}, line_kwargs = {}, **axes_kwargs):
     """
     Plot a given GLS with linear *and* logarithmic y axes
 
@@ -174,17 +177,17 @@ def gls_both(GLS, x_linlog = "log", frequency = False, highlight = None, title =
         Limits on the vertical axes of the plots
         ((lin_min, lin_max), (log_min, log_max))
         Default: ((0, 1), (1e-5, 1))
-    axes_kwargs: dict, optional
-        Keyword arguments for the axes object.
-        e.g. xlabel, ylabel, xlim, ylim, ...
-        Default: {}
+    figure_kwargs: dict, optional
+        Keyword arguments for the figure object.
+        e.g. tight_layout, figsize, ...
     line_kwargs: dict, optional
         Keyword arguments for the line object.
         e.g. ls, lw, color, ...
         Default: {}
-    **figure_kwargs:
-        Keyword arguments for the figure object.
-        e.g. tight_layout, figsize, ...
+    **axes_kwargs:
+        Keyword arguments for the axes objects.
+        e.g. xlabel, ylabel, xlim, ylim, ...
+        Default: {}
 
     Returns
     -------
@@ -280,14 +283,92 @@ def gls(GLS, mode = "log", frequency = False, saveto = None, save_kwargs = {}, r
         fig, ax = gls_both(GLS_, frequency = frequency, **kwargs)
     else:
         fig, ax = gls_one(GLS_, y_linlog = mode, frequency = frequency, **kwargs)
-    save_show(saveto, fig, **save_kwargs)
+    _save_show(saveto, fig, **save_kwargs)
     if return_fig_axs:
         return fig, ax
 
-def points_simple(x, y, ax, xerr = None, yerr = None, color = "black", cmap = plt.cm.jet, **kwargs):
+def _points(ax, x, y, **kwargs):
     """
-    Make a simple plot of x, y data points (and errors if available) in a given axes object
+    Make a simple plot of x, y data points in a given axes object
+
+    Parameters
+    ----------
+    ax: matplotlib.axes._axes.Axes
+        Axes object to plot into
+    x: array-like
+        Horizontal axis data (e.g. time, phase)
+    y: array-like
+        Vertical axis data (e.g. magnitude)
+    **kwargs:
+        Keyword arguments for ax.scatter
+    """
+    s_kw = {"s": 25, "marker": 'o', "label": "Data", "zorder": 1, "cmap": plt.cm.jet, "c": "black"}
+    s_kw.update(kwargs)
+    ax.scatter(x, y, **s_kw)
+
+def _errorbars(ax, x, y, xerr = None, yerr = None, **kwargs):
+    """
+    Make a simple plot of x, y error bars in a given axes object
+
+    Parameters
+    ----------
+    ax: matplotlib.axes._axes.Axes
+        Axes object to plot into
+    x: array-like
+        Horizontal axis data (e.g. time, phase)
+    y: array-like
+        Vertical axis data ()
+    xerr: array-like, optional
+        Horizontal axis errors
+        Default: None
+    yerr: array-like, optional
+        Vertical axis errors
+        Default: None
+    **kwargs:
+        Keyword arguments for ax.errorbar
+    """
+    if xerr is None and yerr is None:
+        return
+    e_kw = {"fmt": "none", "ecolor": "black", "zorder": 0}
+    e_kw.update(kwargs)
+    ax.errorbar(x, y, xerr = xerr, yerr = yerr, **e_kw)
+
+def _points_cameras(ax, x, y, cam, c="black", **kwargs):
+    """
+    Make a simple plot of x, y data points in a given axes object
+
+    Parameters
+    ----------
+    ax: matplotlib.axes._axes.Axes
+        Axes object to plot into
+    x: array-like
+        Horizontal axis data (e.g. time, phase)
+    y: array-like
+        Vertical axis data (e.g. magnitude)
+    cam: array-like
+        Which camera each data point is from
+    c: str *or* array-like, optional
+        Which colour to plot the data points in
+        If str, a single colour
+        If array-like, a colour map is used (see _points)
+        Default: "black"
+    **kwargs:
+        Keyword arguments for _points
+    """
+    cameras_present = np.unique(cam)
+    for C in cameras_present:
+        marker = symbol_map[C]
+        indices = np.where(cam == C)[0]
+        x_ = x[indices]
+        y_ = y[indices]
+        c_ = c if isinstance(c, str) else c[indices]
+        _points(x_, y_, ax, marker = marker, c = c_, **kwargs)
+
+def _trendline(x, y, ax, **kwargs):
+    """
+    Make a simple plot of a trend line in a given axes object
     This is primarily a helper function, you probably don't want to use it on its own.
+    Use _trendline_errors for plotting the error bars
 
     Parameters
     ----------
@@ -297,25 +378,26 @@ def points_simple(x, y, ax, xerr = None, yerr = None, color = "black", cmap = pl
         Vertical axis data ()
     ax: matplotlib.axes._axes.Axes
         Axes object to plot into
-    xerr: array-like, optional
-        Horizontal axis errors
-        Default: None
-    yerr: array-like, optional
-        Vertical axis errors
-        Default: None
-    color: str or array-like, optional
-        Colour(s) to use for the points
-        If str, one colour for all.
-        If array-like, use a colourmap.
-        N.B. The errorbars are always black.
-        Default: "black"
-    cmap: matplotlib.colors.LinearSegmentedColormap, optional
-        The colourmap to use if color is array-like.
-        Does nothing if color is a string.
-        Default: plt.cm.jet
     **kwargs:
-        Keyword arguments for ax.scatter
+        Keyword arguments for ax.plot
     """
-    ax.scatter(x, y, color = color, cmap = cmap, **kwargs)
-    if xerr is not None or yerr is not None:
-        ax.errorbar(x, y, xerr=xerr, yerr=yerr, fmt="none", ecolor = "black", zorder = 0, **kwargs)
+    l_kw = {"lw": 4, "color": "red", "zorder": 2, "path_effects": [path_effects.Stroke(linewidth=6, foreground="black"), path_effects.Normal()], "label": "Trend line"}
+    l_kw.update(kwargs)
+    ax.plot(x, y, **l_kw)
+
+def time_data(t, y, xerr = None, yerr = None, saveto = None, color = "black", marker = "o", mag = True, trendline = None):
+    """
+    Plot data (mag/flux) over time
+    """
+    pass
+
+def lst_data(l, y, lerr = None, yerr = None, saveto = None, color = "black", marker = "o", mag = True):
+    """
+    Plot data (mag/flux) over LST
+    """
+    pass
+
+def phase_data(ph, y, pherr = None, yerr = None, saveto = None, color = "black", marker = "o", mag = True, trendline = None):
+    """
+    Plot phase-folded data (mag/flux)
+    """

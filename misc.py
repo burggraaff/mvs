@@ -1,5 +1,7 @@
 import numpy as np
 
+cameras = ("N", "W", "E", "S", "C")
+
 def period_with_error(low, best, high, latex=False):
     """
     Convert a given period range to an interval with correct significant digits.
