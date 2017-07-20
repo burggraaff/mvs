@@ -8,4 +8,4 @@ To do:
 
 - Remove astropy table dependency: use only numpy arrays internally
 - Add example scripts
-- Speed up GLS, chi^2 (port to C? Numpy magic?)
+- Speed up GLS, chi^2 (port to C? Numpy magic?) or just scrap them and use better versions by others
