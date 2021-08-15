@@ -1,11 +1,5 @@
 # mvs
 
-This is a module with Python code I wrote while working on my MSc research project _Variable stars in MASCARA_.
+This is a module for processing MASCARA data to look for variable stars. It is loosely based on code from my master's project which led to this publication: https://doi.org/10.1051/0004-6361/201833142
 
-This is extremely incomplete and work-in-progress!
-
-To do:
-
-- Remove astropy table dependency: use only numpy arrays internally
-- Add example scripts
-- Speed up GLS, chi^2 (port to C? Numpy magic?) or just scrap them and use better versions by others
+That code was embarrassingly ugly and needs a proper re-write, which I intend to do here.
