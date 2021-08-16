@@ -203,17 +203,17 @@ def read_all_data_for_one_star(filenames, ASCC, force = True, keys = ("jdmid", "
     assert mag in keys, "mvs.io.read_all_data_for_one_star: key for mag (`{0}`) not in keys: {1}".format(mag, keys)
 
     ASCC = str(ASCC)
-    star = create_star_from_hdf5_files(ASCC, filenames, force = force)
+    star = create_star_from_hdf5_files(ASCC, filenames, force=force)
 
-    table_tuples = [(which_camera(filename), read_hdf5_to_table_for_one_star(filename, ASCC, keys, force = force)) for filename in filenames]
+    table_tuples = [(which_camera(filename), read_hdf5_to_table_for_one_star(filename, ASCC, keys, force=force)) for filename in filenames]
     table_tuples = [tup for tup in table_tuples if tup[1] is not None]
-    assert len(table_tuples), "mvs.io.read_all_data_for_one_star: No data for star ASCC {0} found".format(ASCC)
+    assert len(table_tuples), f"mvs.io.read_all_data_for_one_star: No data for star ASCC {ASCC} found"
 
     if add_cameraname:
         for letter, t in table_tuples:
-            letter_col = table.Column([letter] * len(t), name = "camera", dtype = str)
+            letter_col = table.Column([letter] * len(t), name="camera", dtype=str)
             t.add_column(letter_col)
-    only_tables = zip(*table_tuples)[1]
+    only_tables = [tup[1] for tup in table_tuples]
     full_table = table.vstack(only_tables)
 
     if "nobs" in keys:

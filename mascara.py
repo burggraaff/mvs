@@ -16,4 +16,4 @@ data_filenames = sorted(data_folder.glob("*.hdf5"))
 ascc = argv[2]
 
 # Read data
-star = io.create_star_from_hdf5_files(ascc, data_filenames)
+star, data = io.read_all_data_for_one_star(data_filenames, ascc)
