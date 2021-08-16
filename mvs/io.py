@@ -4,12 +4,8 @@ import h5py
 from astropy.io.ascii import read
 from astropy import table
 import numpy as np
-try:
-    from PyAstronomy.pyasl import helio_jd
-    HJD = True
-except ImportError:
-    warn("Could not import PyAstronomy -- will use regular Julian Dates rather than Heliocentric", ImportWarning)
-    HJD = False
+from PyAstronomy.pyasl import helio_jd
+HJD = True
 
 def create_star_from_hdf5_files(ASCC, filenames, force=True):
     """
@@ -231,10 +227,9 @@ def read_all_data_for_one_star(filenames, ASCC, force = True, keys = ("jdmid", "
             full_table.remove_rows(which)
     if any(full_table[time] > 2.4e6): # reduced JD
         full_table[time] -= 2.4e6
-    if HJD:
-        full_table[time] = [helio_jd(jd, star.ra, star.dec) for jd in full_table[time]]
-        full_table.rename_column(time, "HJD")
-        time = "HJD"
+    full_table[time] = [helio_jd(jd, star.ra, star.dec) for jd in full_table[time]]
+    full_table.rename_column(time, "HJD")
+    time = "HJD"
 
     full_table.sort(time)
     return star, full_table
