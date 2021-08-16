@@ -3,7 +3,6 @@ from .misc import Star, cameras
 import h5py
 from astropy.io.ascii import read
 from astropy import table
-from scipy.misc import imread
 import numpy as np
 try:
     from PyAstronomy.pyasl import helio_jd
@@ -12,7 +11,7 @@ except ImportError:
     warn("Could not import PyAstronomy -- will use regular Julian Dates rather than Heliocentric", ImportWarning)
     HJD = False
 
-def create_star_from_hdf5_files(ASCC, filenames, force = True):
+def create_star_from_hdf5_files(ASCC, filenames, force=True):
     """
     Create an mvs.misc.Star object for a given star from given hdf5 files
 
@@ -37,12 +36,18 @@ def create_star_from_hdf5_files(ASCC, filenames, force = True):
     ValueError:
         If the star cannot be found in a single (`force = False`) or any (`force = True`) of the given files
     """
-    ASCC = str(ASCC)
+    ASCC = bytes(ASCC, "utf-8")
     for f in filenames:
         l = h5py.File(f, 'r')
         header = l["header"]
         try:
             index = np.where(header["ascc"][:] == ASCC)[0][0]
+        except IndexError:
+            if force:
+                continue
+            else:
+                raise ValueError(f"Could not find the star ASCC {ASCC} in the file {f}. Consider re-running with `force = True`.")
+        else:
             ra = header["ra"][index]
             dec = header["dec"][index]
             spectype = header["spectype"][index]
@@ -50,17 +55,13 @@ def create_star_from_hdf5_files(ASCC, filenames, force = True):
             V = header["vmag"][index]
             star = Star(ASCC, ra, dec, spectype, B, V)
             break
-        except IndexError:
-            if force:
-                continue
-            else:
-                raise ValueError("Could not find the star ASCC {0} in the file {1}. Consider re-running with `force = True`.".format(ASCC, filenames))
         finally:
             l.close()
     try:
         return star
     except NameError:
         raise ValueError("Could not find the star ASCC {0} in any of the given files: {1}".format(ASCC, filenames))
+
 
 def which_camera(filename):
     """
