@@ -151,7 +151,7 @@ def read_hdf5_to_table_for_one_star(filename, ASCC, keys = ("jdmid", "mag0", "em
     l.close()
     return t
 
-def read_all_data_for_one_star(filenames, ASCC, force = True, keys = ("jdmid", "mag0", "emag0", "nobs", "lst"), time = "jdmid", mag = "mag0", emag = "emag0", add_cameraname = True, min_nr_points = 250, min_nobs = 50):
+def read_all_data_for_one_star(filenames, ASCC, force=True, keys = ("jdmid", "mag0", "emag0", "nobs", "lst"), time = "jdmid", mag = "mag0", emag = "emag0", add_cameraname = True, min_nr_points = 250, min_nobs = 50):
     """
     Read data from a list of filenames for a given ASCC code
 
