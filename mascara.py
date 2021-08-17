@@ -88,7 +88,7 @@ phase = foldAt(data["HJD"], main_period)
 
 # Phase plot
 plt.figure(figsize=(4,3))
-plt.errorbar(phase, data["mag0"], yerr=data["emag0"], color="k", fmt="o")
+plt.errorbar(phase, data["mag0"], yerr=data["emag0"], color="k", fmt="o", markersize=3)
 plt.xlim(-0.01, 1.01)
 plt.ylim(1.05*data["mag0"].max(), 1.05*data["mag0"].min())
 plt.xlabel("Phase")
