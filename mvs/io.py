@@ -34,25 +34,23 @@ def create_star_from_hdf5_files(ASCC, filenames, force=True):
     """
     ASCC = bytes(ASCC, "utf-8")
     for f in filenames:
-        l = h5py.File(f, 'r')
-        header = l["header"]
-        try:
-            index = np.where(header["ascc"][:] == ASCC)[0][0]
-        except IndexError:
-            if force:
-                continue
+        with h5py.File(f, "r") as file:
+            header = file["header"]
+            try:
+                index = np.where(header["ascc"][:] == ASCC)[0][0]
+            except IndexError:
+                if force:
+                    continue
+                else:
+                    raise ValueError(f"Could not find the star ASCC {ASCC} in the file {f}. Consider re-running with `force = True`.")
             else:
-                raise ValueError(f"Could not find the star ASCC {ASCC} in the file {f}. Consider re-running with `force = True`.")
-        else:
-            ra = header["ra"][index]
-            dec = header["dec"][index]
-            spectype = header["spectype"][index]
-            B = header["bmag"][index]
-            V = header["vmag"][index]
-            star = Star(ASCC, ra, dec, spectype, B, V)
-            break
-        finally:
-            l.close()
+                ra = header["ra"][index]
+                dec = header["dec"][index]
+                spectype = header["spectype"][index]
+                B = header["bmag"][index]
+                V = header["vmag"][index]
+                star = Star(ASCC, ra, dec, spectype, B, V)
+                break
     try:
         return star
     except NameError:
