@@ -1,11 +1,12 @@
-from warnings import warn
-from .misc import Star, cameras
+from .misc import Star
 import h5py
 from astropy.io.ascii import read
-from astropy import table
+from astropy import table, time, coordinates
 import numpy as np
-from PyAstronomy.pyasl import helio_jd
-HJD = True
+
+# Keys to retrieve from HDF5 files
+hdf5keys = ("jdmid", "mag0", "emag0", "nobs", "lst", "lstseq")
+
 
 def create_star_from_hdf5_files(ASCC, filenames, force=True):
     """
@@ -77,9 +78,8 @@ def which_camera(filename):
         letter = filename.stem.split(".")[0].split("LP")[1]
     except:
         letter = "?"
-    if letter not in cameras:
-        letter = "?"
     return letter
+
 
 def read_filenames_from_text_file(textfilename):
     """
@@ -100,7 +100,8 @@ def read_filenames_from_text_file(textfilename):
         filenames = [F.strip() for F in filenames]
     return filenames
 
-def read_hdf5_to_table_for_one_star(filename, ASCC, keys = ("jdmid", "mag0", "emag0", "nobs", "lst"), force = False):
+
+def read_hdf5_to_table_for_one_star(filename, ASCC, force=False):
     """
     Read a single HDF5 file into an astropy table for a single star
 
@@ -110,46 +111,47 @@ def read_hdf5_to_table_for_one_star(filename, ASCC, keys = ("jdmid", "mag0", "em
         HDF5 filename
     ASCC:
         ASCC code of the star to read data for
-    keys: array-like, optional
-        Keys from the table to read in
-        Default: ("jdmid", "mag0", "emag0", "nobs", "lst")
     force: boolean, optional
-        If False, raise an Exception when the file cannot be opened or the star is not in that file.
-        If True, only warn in those cases (recommended when loading multiple files)
+        If True, raise an Exception when the file cannot be opened or the star is not in that file.
+        If False, skip ahead and return None
         Default: False
 
     Returns
     -------
-    t: astropy.table.table.Table
+    data_table: astropy.table.table.Table
         Table with data from filename for star ASCC
     """
-    assert len(keys), "mvs.io.read_hdf5_to_table_for_one_star: did not receive any keys to parse"
+    # Convert the ASCC number to a string, because that's what h5py expects
     ASCC = str(ASCC)
-    try:
-        l = h5py.File(filename, 'r')
-    except IOError:
-        if force:
-            warn("mvs.io.read_hdf5_to_table_for_one_star: could not open file `{0}`".format(filename))
-            return None
-        else:
-            raise IOError("mvs.io.read_hdf5_to_table_for_one_star: could not open file `{0}`".format(filename))
-    try:
-        data = l["data"][ASCC]
-    except KeyError:
-        l.close()
-        if force:
-            return None
-        else:
-            raise ValueError("mvs.io.read_hdf5_to_table_for_one_star: star ASCC {0} was not found in file `{1}`".format(ASCC, filename))
-    assert all(key in data.keys() for key in keys), "mvs.io.read_hdf5_to_table_for_one_star: some of the requested keys are not in the HDF5 file.\nYou wanted {0}\nThe file has {1}".format(keys, data.keys())
-    t = table.Table()
-    for key in keys:
-        col = table.Column(data[key], name = key)
-        t.add_column(col)
-    l.close()
-    return t
 
-def read_all_data_for_one_star(filenames, ASCC, force=True, keys = ("jdmid", "mag0", "emag0", "nobs", "lst"), time = "jdmid", mag = "mag0", emag = "emag0", add_cameraname = True, min_nr_points = 250, min_nobs = 50):
+    # Read the HDF5 file with h5py
+    with h5py.File(filename, "r") as file:
+        # Try to access the data
+        try:
+            data = file["data"][ASCC]
+
+        # If this star was not found, assume it is not present in this data set
+        except KeyError:
+            data_table = None
+
+            # Raise an error if trying to force data from this file
+            if force:
+                raise ValueError(f"Star ASCC {ASCC} was not found in file `{filename}`")
+
+        # If this star was found, extract the data into a table
+        else:
+            assert all(key in data.keys() for key in hdf5keys), f"Some of the requested keys are not in the HDF5 file.\nYou wanted {hdf5keys}\nThe file has {data.keys()}"
+
+            # Manually put each column into an AstroPy table
+            data_table = table.Table()
+            for key in hdf5keys:
+                col = table.Column(data[key], name=key)
+                data_table.add_column(col)
+
+    return data_table
+
+
+def read_all_data_for_one_star(filenames, ASCC, force=False, min_nr_points=250, min_nobs=50):
     """
     Read data from a list of filenames for a given ASCC code
 
@@ -160,22 +162,9 @@ def read_all_data_for_one_star(filenames, ASCC, force=True, keys = ("jdmid", "ma
     ASCC:
         ASCC code of the star you want data for
     force: boolean, optional
-        If True, ignore files that do not exist or do not contain the star. If False, raise an Exception in those cases.
-        Default: True
-    keys: array-like, optional
-        Keys from the HDF5 files to retrieve
-        Default: ("jdmid", "mag0", "emag0", "nobs", "lst")
-    time: str, optional
-        Which key corresponds to the horizontal (time) axis
-        Default: "jdmid"
-    mag: str, optional
-        Which key corresponds to the vertical (magnitude) axis
-        Default: "mag0"
-    emag: str, optional
-        Which key corresponds to the vertical error (emagnitude) axis
-        Default: "emag0"
-    add_cameraname: boolean, optional
-        If True, add a column with the name of the camera each file is from using mvs.io.which_camera
+        If True, raise an error if files do not contain this star.
+        If False, skip those files.
+        Default: False
     min_nr_points: int, optional
         Minimum number of points required from each camera.
         If there are fewer points from a certain camera, detrending may not work properly.
@@ -188,49 +177,67 @@ def read_all_data_for_one_star(filenames, ASCC, force=True, keys = ("jdmid", "ma
 
     Returns
     -------
-    s: mvs.misc.Star
+    star: mvs.misc.Star
         Star object with information about the star (name, coords, ...)
-    t: astropy.table.table.Table
+    full_table: astropy.table.table.Table
         Table with the given keys for the given star from the given filenames
     """
-    assert time in keys, f"mvs.io.read_all_data_for_one_star: key for time (`{time}`) not in keys: {keys}"
-    assert mag in keys, f"mvs.io.read_all_data_for_one_star: key for mag (`{time}`) not in keys: {keys}"
-
+    # Convert the ASCC number to a string, because that's what h5py expects
     ASCC = str(ASCC)
+
+    # Create a Star object from the data
     star = create_star_from_hdf5_files(ASCC, filenames, force=force)
 
-    table_tuples = [(which_camera(filename), read_hdf5_to_table_for_one_star(filename, ASCC, keys, force=force)) for filename in filenames]
-    table_tuples = [tup for tup in table_tuples if tup[1] is not None]
-    assert len(table_tuples), f"mvs.io.read_all_data_for_one_star: No data for star ASCC {ASCC} found"
+    # Read the data
+    data_tables = [read_hdf5_to_table_for_one_star(filename, ASCC, force=force) for filename in filenames]
+    camera_names = [which_camera(filename) for filename in filenames]
 
-    if add_cameraname:
-        for letter, t in table_tuples:
-            letter_col = table.Column([letter] * len(t), name="camera", dtype=str)
-            t.add_column(letter_col)
-    only_tables = [tup[1] for tup in table_tuples]
-    full_table = table.vstack(only_tables)
+    # Remove empty tables
+    data_tables, camera_names = zip(*[(data, camera) for data, camera in zip(data_tables, camera_names) if data is not None])
 
-    if "nobs" in keys:
-        below_min = np.where(full_table["nobs"] < min_nobs)[0]
-        full_table.remove_rows(below_min)
-    if emag in keys:
-        not_positive = np.where(full_table[emag] <= 0.)[0]
-        full_table.remove_rows(not_positive)
-        if "nobs" in keys:
-            full_table[emag] /= np.sqrt(full_table["nobs"])
-    for c in cameras:
-        # if not enough data from this camera, you cannot detrend properly
-        which = np.where(full_table["camera"] == c)[0]
-        if len(which) < min_nr_points:
-            full_table.remove_rows(which)
-    if any(full_table[time] > 2.4e6): # reduced JD
-        full_table[time] -= 2.4e6
-    full_table[time] = [helio_jd(jd, star.ra, star.dec) for jd in full_table[time]]
-    full_table.rename_column(time, "HJD")
-    time = "HJD"
+    # Check whether data were found at all
+    assert len(data_tables), f"No data for star ASCC {ASCC} found"
 
-    full_table.sort(time)
+    # Add a column for camera name
+    for data, camera in zip(data_tables, camera_names):
+        camera_column = table.Column([camera] * len(data), name="camera", dtype="S3")
+        data.add_column(camera_column)
+
+    # Combine the data tables into one
+    full_table = table.vstack(data_tables)
+
+    # Remove data with insufficient nobs
+    not_enough_nobs = np.where(full_table["nobs"] < min_nobs)[0]
+    full_table.remove_rows(not_enough_nobs)
+
+    # Remove data with negative uncertainties
+    # These come from errors in the data pipeline
+    negative_uncertainties = np.where(full_table["emag0"] <= 0.)[0]
+    full_table.remove_rows(negative_uncertainties)
+
+    # Normalise the uncertainties by the number of observations
+    full_table["emag0"] /= np.sqrt(full_table["nobs"])
+
+    # Remove cameras with insufficient data to detrend
+    cameras_used = np.unique(full_table["camera"])
+    for camera in cameras_used:
+        # Find the data from this camera
+        data_from_camera = np.where(full_table["camera"] == camera)[0]
+
+        # If there are too few, remove them all
+        if len(data_from_camera) < min_nr_points:
+            full_table.remove_rows(data_from_camera)
+
+    # Convert Julian Dates (JD) to heliocentric (HJD)
+    # Temporary: use La Palma coordinates - in the future, get from files
+    lapalma = coordinates.EarthLocation.from_geodetic(lat=28.763611, lon=-17.894722, height=2396)
+    times = time.Time(full_table["jdmid"], format="jd", location=lapalma)
+    full_table["jdmid"] = star.convert_JD_to_heliocentric(times)
+    full_table.rename_column("jdmid", "BJD")
+    full_table.sort("BJD")
+
     return star, full_table
+
 
 def write_data_table(data_table, filename, format="ascii.fixed_width", **kwargs):
     """
@@ -250,5 +257,3 @@ def write_data_table(data_table, filename, format="ascii.fixed_width", **kwargs)
         extra keyword arguments for Table.write
     """
     data_table.write(filename, format = format, **kwargs)
-
-read_data_table = read

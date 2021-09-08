@@ -20,7 +20,7 @@ ascc = argv[2]
 star, data = io.read_all_data_for_one_star(data_filenames, ascc)
 
 # Calculate GLS
-gls = periodicity.GLS(data["HJD"], data["mag0"], dy=data["emag0"])
+gls = periodicity.GLS(data["BJD"], data["mag0"], dy=data["emag0"])
 power = gls.power(frequencies)
 
 # Plot GLS
@@ -37,7 +37,7 @@ main_frequency = peak_frequencies[0]
 main_period = periodicity.invert(main_frequency)
 
 # Phase-fold
-phase, phase_average, magnitude_average = periodicity.phase_fold(main_period, data["HJD"].data, data["mag0"].data, data["emag0"].data)
+phase, phase_average, magnitude_average = periodicity.phase_fold(main_period, data["BJD"].data, data["mag0"].data, data["emag0"].data)
 
 # Phase plot
-plot.plot_phasecurve(phase, data["mag0"], data["emag0"], running_average=[phase_average, magnitude_average], title=f"ASCC {ascc} - original phase plot", saveto="phaseplot.pdf")
+plot.plot_phasecurve(phase, data["mag0"], data["emag0"], running_average=[phase_average, magnitude_average], title=f"ASCC {ascc} - original phase plot\nPeriod = {main_period:.4f} d", saveto="phaseplot.pdf")

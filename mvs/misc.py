@@ -1,6 +1,5 @@
+from astropy import coordinates
 import numpy as np
-
-cameras = ("N", "W", "E", "S", "C")
 
 def period_with_error(low, best, high, latex=False):
     """
@@ -88,7 +87,6 @@ class Star(object):
     >>> print s
     Star ASCC 425414 at coordinates (25.00; 25.00); spectral type F5; B = 8.0 and V = 8.0
     """
-
     def __init__(self, ascc, ra, dec, spectype, B, V):
         self.ascc = int(ascc)
         self.ra = float(ra)
@@ -96,5 +94,18 @@ class Star(object):
         self.spectype = spectype
         self.B = float(B)
         self.V = float(V)
+
+        self.coordinates = coordinates.SkyCoord(self.ra, self.dec, unit="deg")
+
     def __repr__(self):
         return "Star ASCC {0} at coordinates ({1:.2f}; {2:.2f}); spectral type {3}; B = {4} and V = {5}".format(self.ascc, self.ra, self.dec, self.spectype, self.B, self.V)
+
+    def convert_JD_to_heliocentric(self, times):
+        """
+        Convert Julian Dates to heliocentric Julian dates (HJD) using this
+        star's coordinates.
+        `times` is assumed to be in astropy.time.Time format.
+        """
+        light_travel_time = times.light_travel_time(self.coordinates)
+        new_times = times.tdb + light_travel_time
+        return new_times.value

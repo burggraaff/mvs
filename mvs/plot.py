@@ -1,17 +1,11 @@
 import numpy as np
 
 from matplotlib import pyplot as plt, patheffects
-from matplotlib.ticker import ScalarFormatter
-from matplotlib.patches import Circle, Wedge
-from matplotlib.collections import PatchCollection
 
 from spectacle.plot import _saveshow
 from spectacle import symmetric_percentiles
 
-from .misc import cameras
 from .periodicity import invert
-
-symbol_map = {'N': '^', 'S': 'v', 'E': 'D', 'W': 's', 'C': 'd', "?": 'o'}
 
 def make_ylim(y, mag=True, percentile=0.5):
     """
