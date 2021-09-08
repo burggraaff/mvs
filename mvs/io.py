@@ -8,56 +8,6 @@ import numpy as np
 hdf5keys = ("jdmid", "mag0", "emag0", "nobs", "lst", "lstseq")
 
 
-def create_star_from_hdf5_files(ASCC, filenames, force=True):
-    """
-    Create an mvs.misc.Star object for a given star from given hdf5 files
-
-    Parameters
-    ----------
-    ASCC:
-        ASCC code of the star
-    filenames: array-like
-        HDF5 filenames to search for the given star in
-    force: boolean, optional
-        If True, ignore files that do not contain this star.
-        If False, raise an Exception in those cases.
-        Default: True
-
-    Returns
-    -------
-    star: mvs.misc.Star
-        Object with stellar properties
-
-    Raises
-    ------
-    ValueError:
-        If the star cannot be found in a single (`force = False`) or any (`force = True`) of the given files
-    """
-    ASCC = bytes(ASCC, "utf-8")
-    for f in filenames:
-        with h5py.File(f, "r") as file:
-            header = file["header"]
-            try:
-                index = np.where(header["ascc"][:] == ASCC)[0][0]
-            except IndexError:
-                if force:
-                    continue
-                else:
-                    raise ValueError(f"Could not find the star ASCC {ASCC} in the file {f}. Consider re-running with `force = True`.")
-            else:
-                ra = header["ra"][index]
-                dec = header["dec"][index]
-                spectype = header["spectype"][index]
-                B = header["bmag"][index]
-                V = header["vmag"][index]
-                star = Star(ASCC, ra, dec, spectype, B, V)
-                break
-    try:
-        return star
-    except NameError:
-        raise ValueError("Could not find the star ASCC {0} in any of the given files: {1}".format(ASCC, filenames))
-
-
 def which_camera(filename):
     """
     Find out which camera a given filename was taken by (MASCARA).
@@ -186,7 +136,7 @@ def read_all_data_for_one_star(filenames, ASCC, force=False, min_nr_points=250, 
     ASCC = str(ASCC)
 
     # Create a Star object from the data
-    star = create_star_from_hdf5_files(ASCC, filenames, force=force)
+    star = Star.from_hdf5_files(ASCC, filenames, force=force)
 
     # Read the data
     data_tables = [read_hdf5_to_table_for_one_star(filename, ASCC, force=force) for filename in filenames]

@@ -1,5 +1,6 @@
-from astropy import coordinates
 import numpy as np
+from astropy import coordinates
+import h5py
 
 def period_with_error(low, best, high, latex=False):
     """
@@ -109,3 +110,56 @@ class Star(object):
         light_travel_time = times.light_travel_time(self.coordinates)
         new_times = times.tdb + light_travel_time
         return new_times.value
+
+    @classmethod
+    def from_hdf5_files(cls, ascc, filenames, force=True):
+        """
+        Create object from a list of HDF5 files.
+
+        Parameters
+        ----------
+        ASCC:
+            ASCC code of the star
+        filenames: array-like
+            HDF5 filenames to search for the given star in
+        force: boolean, optional
+            If True, ignore files that do not contain this star.
+            If False, raise an Exception in those cases.
+            Default: True
+        """
+        # Convert the ASCC number to a string, because that's what h5py expects
+        ascc = bytes(ascc, "utf-8")
+
+        # Loop over the files
+        for f in filenames:
+            # Open the file
+            with h5py.File(f, "r") as file:
+                header = file["header"]
+
+                # Look for this ASCC in the header
+                try:
+                    index = np.where(header["ascc"][:] == ascc)[0][0]
+
+                # If this ASCC is not present in this file:
+                except IndexError:
+                    if force:  # If trying to force-use this file, raise an error
+                        raise ValueError(f"Could not find the star ASCC {ascc} in the file {f}.")
+                    else:  # Else, go on to the next file
+                        continue
+
+                # If the ASCC was found, extract the desired data
+                else:
+                    ra = header["ra"][index]
+                    dec = header["dec"][index]
+                    spectype = header["spectype"][index]
+                    B = header["bmag"][index]
+                    V = header["vmag"][index]
+                    star = cls(ascc, ra, dec, spectype, B, V)
+                    break
+
+        # If no suitable file was found, raise an error
+        else:
+            raise ValueError(f"Could not find the star ASCC {ascc} in any of the given files: {filenames}")
+
+        # Return the Star object
+        return star
