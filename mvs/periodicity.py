@@ -38,6 +38,60 @@ def gls_find_peaks(frequencies, power, **kwargs):
     return peak_indices_sorted, peak_frequencies_sorted, peak_heights_sorted
 
 
+def sort_data(data_main, *data_other):
+    """
+    Sort an arbitrary number of data arrays/columns according to the first one.
+    """
+    # Check that all lengths are the same
+    assert all(len(data) == len(data_main) for data in data_other), "Difference in length between main sorting array and data."
+
+    # Indices that sort everything
+    sorting_indices = np.argsort(data_main)
+
+    # Sort everything
+    data_main_sorted = data_main[sorting_indices]
+    data_other_sorted = [data[sorting_indices] for data in data_other]
+
+    return data_main_sorted, *data_other_sorted
+
+
+def running_average(phase_sorted, magnitude_sorted, magnitude_uncertainty_sorted=None, bin_min=0, bin_max=1, nr_bins=151, binwidth=0.025, averaging_function=np.average):
+    """
+    Calculate a running average.
+    """
+    if magnitude_uncertainty_sorted is None:
+        magnitude_uncertainty_sorted = np.zeros_like(magnitude_sorted)
+
+    # Pad the start and end so the phase loops around (-0.01 is the same as 0.99)
+    # Find the right padding
+    pad_left_index = np.searchsorted(phase_sorted, 1 - binwidth)
+    pad_right_index = np.searchsorted(phase_sorted, binwidth)
+    slice_left, slice_right = np.s_[pad_left_index:], np.s_[:pad_right_index]
+    phase_left = phase_sorted[slice_left] - 1
+    phase_right = phase_sorted[slice_right] + 1
+
+    # Pad the data
+    phase_padded = np.concatenate([phase_left, phase_sorted, phase_right])
+    mag_padded = np.concatenate([magnitude_sorted[slice_left], magnitude_sorted, magnitude_sorted[slice_right]])
+    uncertainty_padded = np.concatenate([magnitude_uncertainty_sorted[slice_left], magnitude_uncertainty_sorted, magnitude_uncertainty_sorted[slice_right]])
+
+    # Find the indices that correspond to the phase bins
+    bin_centers = np.linspace(bin_min, bin_max, nr_bins)
+    bin_lower = bin_centers - binwidth
+    bin_upper = bin_centers + binwidth
+    lower_indices = np.searchsorted(phase_padded, bin_lower)
+    upper_indices = np.searchsorted(phase_padded, bin_upper)
+    slices = [np.s_[lower:upper] for lower, upper in zip(lower_indices, upper_indices)]
+
+    # Calculate the running averages
+    magnitude_average = np.array([np.average(mag_padded[s], weights=1/uncertainty_padded[s]**2) for s in slices])
+    # To do: uncertainty on running average
+    # To do: deal with missing phases
+    # To do: investigate PyAstronomy.pyasl.binningx0dt
+
+    return bin_centers, magnitude_average
+
+
 def phase_fold(period, time, magnitude, magnitude_uncertainty=None, nr_bins=151, binwidth=0.025):
     """
     Phase-fold the data and compute a running average.
@@ -48,44 +102,15 @@ def phase_fold(period, time, magnitude, magnitude_uncertainty=None, nr_bins=151,
     # Phase-fold
     phase = foldAt(time, period)
 
-    # Running average
-    # First, sort everything by phase
-    phase_indices = np.argsort(phase)
-    phase_sorted = phase[phase_indices]
-    time_sorted = time[phase_indices]
-    mag_sorted = magnitude[phase_indices]
-    uncertainty_sorted = magnitude_uncertainty[phase_indices]
+    # Sort everything by phase
+    phase_sorted, time_sorted, mag_sorted, uncertainty_sorted = sort_data(phase, time, magnitude, magnitude_uncertainty)
 
-    # Then, pad the start and end so the phase loops around (-0.01 is the same as 0.99)
-    # Find the right padding
-    pad_left_index = np.searchsorted(phase_sorted, 1 - binwidth)
-    pad_right_index = np.searchsorted(phase_sorted, binwidth)
-    slice_left, slice_right = np.s_[pad_left_index:], np.s_[:pad_right_index]
-    phase_left = phase_sorted[slice_left] - 1
-    phase_right = phase_sorted[slice_right] + 1
-
-    # Pad the data
-    phase_padded = np.concatenate([phase_left, phase_sorted, phase_right])
-    mag_padded = np.concatenate([mag_sorted[slice_left], mag_sorted, mag_sorted[slice_right]])
-    uncertainty_padded = np.concatenate([uncertainty_sorted[slice_left], uncertainty_sorted, uncertainty_sorted[slice_right]])
-
-    # Then, find the indices that correspond to the phase bins
-    bin_centers = np.linspace(0, 1, nr_bins)
-    bin_lower = bin_centers - binwidth
-    bin_upper = bin_centers + binwidth
-    lower_indices = np.searchsorted(phase_padded, bin_lower)
-    upper_indices = np.searchsorted(phase_padded, bin_upper)
-    slices = [np.s_[lower:upper] for lower, upper in zip(lower_indices, upper_indices)]
-
-    # Calculate the running averages
-    mag_average = np.array([np.average(mag_padded[s], weights=1/uncertainty_padded[s]**2) for s in slices])
-    # To do: uncertainty on running average
-    # To do: deal with missing phases
-    # To do: investigate PyAstronomy.pyasl.binningx0dt
+    # Calculate the running average
+    phase_average, magnitude_average = running_average(phase_sorted, mag_sorted, uncertainty_sorted)
 
     # Find a suitable epoch
-    phase_at_minimum = bin_centers[np.nanargmax(mag_average)]
+    phase_at_minimum = phase_average[np.nanargmax(magnitude_average)]
     phase_at_minimum_index = np.searchsorted(phase_sorted, phase_at_minimum)
     time_at_minimum_phase = time_sorted[phase_at_minimum_index]
 
-    return phase, bin_centers, mag_average
+    return phase, phase_average, magnitude_average
