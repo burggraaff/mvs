@@ -76,7 +76,7 @@ def running_average(phase_sorted, magnitude_sorted, magnitude_uncertainty_sorted
     uncertainty_padded = np.concatenate([magnitude_uncertainty_sorted[slice_left], magnitude_uncertainty_sorted, magnitude_uncertainty_sorted[slice_right]])
 
     # Find the indices that correspond to the phase bins
-    bin_centers = np.linspace(bin_min, bin_max, nr_bins)
+    bin_centers = np.linspace(bin_min, bin_max, nr_bins, endpoint=False)
     bin_lower = bin_centers - binwidth
     bin_upper = bin_centers + binwidth
     lower_indices = np.searchsorted(phase_padded, bin_lower)
