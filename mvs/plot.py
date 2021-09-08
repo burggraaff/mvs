@@ -89,7 +89,7 @@ def plot_phasecurve(phase, magnitude, magnitude_uncertainty=None, running_averag
     plt.xlim(0, 1)
     plt.ylim(make_ylim(magnitude))
     plt.xlabel("Phase")
-    plt.ylabel("Magnitude")
+    plt.ylabel("$\Delta$ Magnitude")
     plt.grid(ls="--")
     plt.title(title)
 
