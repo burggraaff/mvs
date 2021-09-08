@@ -1,6 +1,3 @@
-from operator import truediv
-from functools import partial
-
 import numpy as np
 
 import matplotlib as mpl
@@ -13,10 +10,9 @@ from matplotlib.collections import PatchCollection
 from spectacle.plot import _saveshow
 
 from .misc import cameras
+from .periodicity import invert
 
 symbol_map = {'N': '^', 'S': 'v', 'E': 'D', 'W': 's', 'C': 'd', "?": 'o'}
-
-invert = partial(truediv, 1)
 
 def make_ylim(y, mag = True, zoom = False):
     """

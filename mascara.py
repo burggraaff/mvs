@@ -5,12 +5,9 @@ import numpy as np
 from matplotlib import pyplot as plt, patheffects
 from sys import argv
 from pathlib import Path
-from astropy.timeseries import LombScargle as GLS
-from astropy import table
-from PyAstronomy.pyasl import foldAt
-from scipy.signal import find_peaks
 
-from mvs import io, plot
+from mvs import io, plot, periodicity
+from mvs.periodicity import frequencies_default as frequencies
 
 # Get data folder from command line
 data_folder = Path(argv[1])
@@ -23,17 +20,15 @@ ascc = argv[2]
 star, data = io.read_all_data_for_one_star(data_filenames, ascc)
 
 # Calculate GLS
-gls = GLS(data["HJD"], data["mag0"], dy=data["emag0"])
+gls = periodicity.GLS(data["HJD"], data["mag0"], dy=data["emag0"])
 
-frequencies = np.concatenate([np.logspace(-2, -1, 2000, endpoint=False), np.logspace(-1, 2, 50000)])
-periods = 1 / frequencies
 power = gls.power(frequencies)
 
 # Plot GLS
 plot.plot_GLS(frequencies, power, title=f"Original Lomb-Scargle periodogram for ASCC {ascc}")
 
 # Find peaks in GLS
-peaks, peak_properties = find_peaks(power, height=1e-2, distance=30)
+peaks, peak_properties = periodicity.find_peaks(power, height=1e-2, distance=30)
 peak_frequencies = frequencies[peaks]
 peak_heights = peak_properties["peak_heights"]
 
@@ -50,7 +45,7 @@ main_frequency = peak_frequencies_sorted[0]
 main_period = 1/main_frequency
 
 # Phase-fold
-phase = foldAt(data["HJD"], main_period)
+phase = periodicity.foldAt(data["HJD"], main_period)
 
 # Running average
 nr_bins = 151
