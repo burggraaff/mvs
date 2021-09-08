@@ -113,4 +113,9 @@ def phase_fold(period, time, magnitude, magnitude_uncertainty=None, nr_bins=151,
     phase_at_minimum_index = np.searchsorted(phase_sorted, phase_at_minimum)
     time_at_minimum_phase = time_sorted[phase_at_minimum_index]
 
+    # Adjust the calculated phase to the epoch of the minimum
+    phase = (phase - phase_at_minimum) % 1
+    phase_average = (phase_average - phase_at_minimum) % 1
+    phase_average, magnitude_average = sort_data(phase_average, magnitude_average)
+
     return phase, phase_average, magnitude_average
