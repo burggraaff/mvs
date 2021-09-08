@@ -21,28 +21,20 @@ star, data = io.read_all_data_for_one_star(data_filenames, ascc)
 
 # Calculate GLS
 gls = periodicity.GLS(data["HJD"], data["mag0"], dy=data["emag0"])
-
 power = gls.power(frequencies)
 
 # Plot GLS
 plot.plot_GLS(frequencies, power, title=f"Original Lomb-Scargle periodogram for ASCC {ascc}")
 
 # Find peaks in GLS
-peaks, peak_properties = periodicity.find_peaks(power, height=1e-2, distance=30)
-peak_frequencies = frequencies[peaks]
-peak_heights = peak_properties["peak_heights"]
+peak_indices, peak_frequencies, peak_heights = periodicity.gls_find_peaks(frequencies, power)
 
 # Plot GLS with peaks indicated
 plot.plot_GLS(frequencies, power, peaks=(peak_frequencies, peak_heights), title=f"Original Lomb-Scargle periodogram for ASCC {ascc}, with peaks indicated")
 
 # Find strongest peaks
-peak_order = np.argsort(peak_heights)[::-1]
-peaks_sorted = peaks[peak_order]
-peak_frequencies_sorted = peak_frequencies[peak_order]
-peak_heights_sorted = peak_heights[peak_order]
-
-main_frequency = peak_frequencies_sorted[0]
-main_period = 1/main_frequency
+main_frequency = peak_frequencies[0]
+main_period = periodicity.invert(main_frequency)
 
 # Phase-fold
 phase = periodicity.foldAt(data["HJD"], main_period)
