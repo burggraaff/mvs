@@ -74,7 +74,7 @@ def which_camera(filename):
         "?" if the camera letter could not be determined
     """
     try:
-        letter = filename.split(".")[0].split("LP")[1]
+        letter = filename.stem.split(".")[0].split("LP")[1]
     except:
         letter = "?"
     if letter not in cameras:
