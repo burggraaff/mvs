@@ -84,7 +84,7 @@ def running_average(phase_sorted, magnitude_sorted, magnitude_uncertainty_sorted
     slices = [np.s_[lower:upper] for lower, upper in zip(lower_indices, upper_indices)]
 
     # Calculate the running averages
-    magnitude_average = np.array([np.average(mag_padded[s], weights=1/uncertainty_padded[s]**2) for s in slices])
+    magnitude_average = np.array([averaging_function(mag_padded[s], weights=1/uncertainty_padded[s]**2) for s in slices])
     # To do: uncertainty on running average
     # To do: deal with missing phases
     # To do: investigate PyAstronomy.pyasl.binningx0dt
