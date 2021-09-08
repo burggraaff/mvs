@@ -73,7 +73,7 @@ phase_right = phase_sorted[slice_right] + 1
 # Pad the data
 phase_padded = np.concatenate([phase_left, phase_sorted, phase_right])
 mag_padded = np.concatenate([mag_sorted[slice_left], mag_sorted, mag_sorted[slice_right]])
-uncertainty_padded = np.concatenate([mag_sorted[slice_left], uncertainty_sorted, mag_sorted[slice_right]])
+uncertainty_padded = np.concatenate([uncertainty_sorted[slice_left], uncertainty_sorted, uncertainty_sorted[slice_right]])
 
 # Then, find the indices that correspond to the phase bins
 bin_centers = np.linspace(0, 1, nr_bins)
@@ -96,7 +96,7 @@ time_at_minimum_phase = time_sorted[phase_at_minimum_index]
 
 # Phase plot
 plt.figure(figsize=(4,3))
-plt.errorbar(phase, data["mag0"], yerr=data["emag0"], color="k", fmt="o", markersize=3)
+plt.errorbar(phase, data["mag0"], yerr=data["emag0"], color="k", fmt="o", markersize=3, rasterized=True)
 plt.plot(bin_centers, mag_average, linewidth=2, color="yellow", path_effects=[patheffects.Stroke(linewidth=4, foreground="black"), patheffects.Normal()], zorder=10)
 plt.xlim(0, 1)
 plt.ylim(1.05*data["mag0"].max(), 1.05*data["mag0"].min())
@@ -104,6 +104,6 @@ plt.xlabel("Phase")
 plt.ylabel("Magnitude")
 plt.grid(ls="--")
 plt.title(f"ASCC {ascc}")
-plt.savefig("phaseplot.pdf", bbox_inches="tight")
+plt.savefig("phaseplot.pdf", bbox_inches="tight", dpi=600)
 plt.show()
 plt.close()
