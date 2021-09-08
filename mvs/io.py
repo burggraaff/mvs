@@ -193,8 +193,8 @@ def read_all_data_for_one_star(filenames, ASCC, force=True, keys = ("jdmid", "ma
     t: astropy.table.table.Table
         Table with the given keys for the given star from the given filenames
     """
-    assert time in keys, "mvs.io.read_all_data_for_one_star: key for time (`{0}`) not in keys: {1}".format(time, keys)
-    assert mag in keys, "mvs.io.read_all_data_for_one_star: key for mag (`{0}`) not in keys: {1}".format(mag, keys)
+    assert time in keys, f"mvs.io.read_all_data_for_one_star: key for time (`{time}`) not in keys: {keys}"
+    assert mag in keys, f"mvs.io.read_all_data_for_one_star: key for mag (`{time}`) not in keys: {keys}"
 
     ASCC = str(ASCC)
     star = create_star_from_hdf5_files(ASCC, filenames, force=force)
