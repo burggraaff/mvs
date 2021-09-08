@@ -2,7 +2,7 @@
 Analyse MASCARA data for a single star.
 """
 import numpy as np
-from matplotlib import pyplot as plt, patheffects
+from matplotlib import pyplot as plt
 from sys import argv
 from pathlib import Path
 
@@ -40,15 +40,4 @@ main_period = periodicity.invert(main_frequency)
 phase, phase_average, magnitude_average = periodicity.phase_fold(main_period, data["HJD"].data, data["mag0"].data, data["emag0"].data)
 
 # Phase plot
-plt.figure(figsize=(4,3))
-plt.errorbar(phase, data["mag0"], yerr=data["emag0"], color="k", fmt="o", markersize=3, rasterized=True)
-plt.plot(phase_average, magnitude_average, linewidth=2, color="yellow", path_effects=[patheffects.Stroke(linewidth=4, foreground="black"), patheffects.Normal()], zorder=10)
-plt.xlim(0, 1)
-plt.ylim(1.05*data["mag0"].max(), 1.05*data["mag0"].min())
-plt.xlabel("Phase")
-plt.ylabel("Magnitude")
-plt.grid(ls="--")
-plt.title(f"ASCC {ascc}")
-plt.savefig("phaseplot.pdf", bbox_inches="tight", dpi=600)
-plt.show()
-plt.close()
+plot.plot_phasecurve(phase, data["mag0"], data["emag0"], running_average=[phase_average, magnitude_average], title=f"ASCC {ascc} - original phase plot", saveto="phaseplot.pdf")
