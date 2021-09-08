@@ -13,7 +13,7 @@ from .periodicity import invert
 
 symbol_map = {'N': '^', 'S': 'v', 'E': 'D', 'W': 's', 'C': 'd', "?": 'o'}
 
-def make_ylim(y, mag=True):
+def make_ylim(y, mag=True, percentile=0.5):
     """
     Generate ylim that neatly fit the data.
 
@@ -30,7 +30,7 @@ def make_ylim(y, mag=True):
     result: tuple
         (ymin, ymax)
     """
-    ymin, ymax = symmetric_percentiles(y, percent=0.1)
+    ymin, ymax = symmetric_percentiles(y, percent=percentile)
     if mag:
         ylim = (ymax, ymin)
     else:
