@@ -22,13 +22,13 @@ star, data = io.read_all_data_for_one_star(data_filenames, ascc)
 # Calculate GLS
 gls = periodicity.GLS(data["BJD"], data["mag0"], dy=data["emag0"])
 power = gls.power(frequencies)
+plot.plot_GLS(frequencies, power, title=f"Original Lomb-Scargle periodogram for ASCC {ascc}")
 
 # Find peaks in GLS
 peak_indices, peak_frequencies, peak_heights = periodicity.gls_find_peaks(frequencies, power)
 
 # Remove harmonics of 1 sidereal day
 peak_frequencies, peak_heights = periodicity.remove_harmonics(periodicity.siderealday_frequency, peak_frequencies, peak_heights, remove_main_frequency=True)
-plot.plot_GLS(frequencies, power, peaks=(peak_frequencies, peak_heights), title=f"Original Lomb-Scargle periodogram for ASCC {ascc}, with non-sidereal peaks indicated")
 
 # Find strongest peaks
 main_frequency = peak_frequencies[0]
