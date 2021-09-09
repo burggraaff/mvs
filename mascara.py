@@ -47,3 +47,5 @@ phase, phase_average, magnitude_average = periodicity.phase_fold(main_period, da
 plot.plot_phasecurve(phase, data["mag0"], data["emag0"], running_average=[phase_average, magnitude_average], title=f"ASCC {ascc} - original phase plot\nPeriod = {main_period:.4f} d", saveto="phaseplot.pdf")
 
 # Detrending
+magnitude_detrended = periodicity.detrend(data["BJD"].data, data["mag0"].data, data["emag0"].data, data["cameras"].data, main_period)
+data.add_column(magnitude_detrended)

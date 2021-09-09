@@ -6,6 +6,7 @@ from functools import partial
 
 import numpy as np
 from astropy.timeseries import LombScargle as GLS
+from astropy import table
 from scipy.signal import find_peaks
 from PyAstronomy.pyasl import foldAt
 
@@ -142,6 +143,23 @@ def running_average(phase_sorted, magnitude_sorted, magnitude_uncertainty_sorted
     return bin_centers, magnitude_average
 
 
+def difference_with_trendline(x, y, x_trend, y_trend):
+    """
+    Remove a trend line from data, according to the closest point in the
+    trend line.
+    """
+    # Find the index of the x position in the trend line data that best corresponds
+    # to the data
+    phase_differences = np.abs(x - x_trend[:,np.newaxis])
+    closest_index = np.nanargmin(phase_differences, axis=0)
+
+    # Get the matching y data and subtract these from the raw data
+    closest_y = y_trend[closest_index]
+    adjusted_y = y - closest_y
+
+    return adjusted_y
+
+
 def phase_fold(period, time, magnitude, magnitude_uncertainty=None, nr_bins=151, binwidth=0.025):
     """
     Phase-fold the data and compute a running average.
@@ -160,7 +178,7 @@ def phase_fold(period, time, magnitude, magnitude_uncertainty=None, nr_bins=151,
 
     # Find a suitable epoch
     phase_at_minimum = phase_average[np.nanargmax(magnitude_average)]
-    phase_at_minimum_index = np.searchsorted(phase_sorted, phase_at_minimum)
+    phase_at_minimum_index = np.searchsorted(phase_sorted, phase_at_minimum) - 1
     time_at_minimum_phase = time_sorted[phase_at_minimum_index]
 
     # Adjust the calculated phase to the epoch of the minimum
@@ -169,3 +187,41 @@ def phase_fold(period, time, magnitude, magnitude_uncertainty=None, nr_bins=151,
     phase_average, magnitude_average = sort_data(phase_average, magnitude_average)
 
     return phase, phase_average, magnitude_average
+
+def detrend(time, magnitude, uncertainty, cameras, main_period, iterations=10, threshold=0.001):
+    """
+    Detrend data.
+    """
+    frequencies_to_remove = [lunar_frequency, *siderealday_frequency*np.arange(1, iterations)]
+
+    # Loop over the cameras and do each individually
+    for camera in np.unique(cameras):
+        # Get the data for this camera only
+        ind = np.where(cameras == camera)[0]
+        time_cam, magnitude_cam, uncertainty_cam = time[ind], magnitude[ind], uncertainty[ind]
+
+        # Now loop over the frequencise we want to remove
+        for f_remove in frequencies_to_remove:
+            p_remove = invert(f_remove)
+
+            # Phase-fold the data at the current iteration
+            phase, phase_average, magnitude_average = phase_fold(main_period, time_cam, magnitude_cam, uncertainty_cam)
+
+            # Remove the real trend from the data
+            residuals = difference_with_trendline(phase, magnitude_cam, phase_average, magnitude_average)
+
+            # Determine the trend in the residuals that corresponds to the frequency we want to remove
+            phase_residuals, phase_average_residuals, residuals_average = phase_fold(p_remove, time_cam, residuals, uncertainty_cam)
+
+            # Remove this new trend from the original data
+            magnitude_cam = difference_with_trendline(phase_residuals, magnitude_cam, phase_average_residuals, residuals_average)
+
+            # Stop if the amplitude of the trendline was small
+            if np.nanmax(residuals_average) - np.nanmin(residuals_average) < threshold:
+                break
+
+        # Put the corrected data back into the original array
+        magnitude[ind] = magnitude_cam
+
+    magnitude_detrended = table.Column(data=magnitude, name="magD")
+    return magnitude_detrended
