@@ -16,6 +16,11 @@ invert = partial(truediv, 1.)
 frequencies_default = np.concatenate([np.logspace(-2, -1, 2000, endpoint=False), np.logspace(-1, 2, 50000)])
 periods_default = invert(frequencies_default)
 
+# Constants
+siderealday = 23.9344699/24.  # Days
+siderealday_frequency = invert(siderealday)  # Per day
+lunar_period = 29.5  # Days
+lunar_frequency = invert(lunar_period)  # Per day
 
 def gls_find_peaks(frequencies, power, **kwargs):
     """
@@ -36,6 +41,41 @@ def gls_find_peaks(frequencies, power, **kwargs):
     peak_heights_sorted = peak_heights[peak_order]
 
     return peak_indices_sorted, peak_frequencies_sorted, peak_heights_sorted
+
+
+def remove_harmonics(main_frequency, peak_frequencies, *peak_properties, threshold=1e-2, remove_main_frequency=False):
+    """
+    Remove harmonics of the main frequency from the given peaks.
+    Any number of additional peak properties (e.g. heights) can also be passed
+    to filter these at the same time.
+
+    max_alias specifies up to which alias we should filter, e.g. if max_alias=10
+    then we filter up to 10*F
+
+    remove_main_frequency determines whether we also remove the main frequency
+    itself, for instance for detrending purposes.
+    """
+    # Calculate the ratio of these frequencies with the main frequency and their remainders
+    # to see if these are close to integer ratios
+    harmonic_ratios = peak_frequencies / main_frequency
+    harmonic_remainders = harmonic_ratios % 1
+
+    # Find near-integer ratios
+    harmonic_indices = np.where((harmonic_remainders < threshold) | (1 - harmonic_remainders < threshold))[0]
+
+    # If we want to keep the main frequency, find its corresponding peaks and don't remove those
+    if not remove_main_frequency:
+        main_indices = np.where((1 - threshold < harmonic_ratios) & (harmonic_ratios < 1 + threshold))[0]
+        harmonic_indices = np.array([ind for ind in harmonic_indices if ind not in main_indices])
+
+    # The indices to keep are simply the inverse of the list of indices to remove
+    safe_indices = ~np.in1d(range(peak_frequencies.shape[0]), harmonic_indices)
+
+    # Finally, filter the peak frequencies and properties
+    safe_frequencies = peak_frequencies[safe_indices]
+    safe_properties = [peak_property[safe_indices] for peak_property in peak_properties]
+
+    return safe_frequencies, *safe_properties
 
 
 def sort_data(data_main, *data_other):

@@ -32,6 +32,10 @@ peak_indices, peak_frequencies, peak_heights = periodicity.gls_find_peaks(freque
 # Plot GLS with peaks indicated
 plot.plot_GLS(frequencies, power, peaks=(peak_frequencies, peak_heights), title=f"Original Lomb-Scargle periodogram for ASCC {ascc}, with peaks indicated")
 
+# Remove harmonics of 1 sidereal day
+peak_frequencies, peak_heights = periodicity.remove_harmonics(periodicity.siderealday_frequency, peak_frequencies, peak_heights, remove_main_frequency=True)
+plot.plot_GLS(frequencies, power, peaks=(peak_frequencies, peak_heights), title=f"Original Lomb-Scargle periodogram for ASCC {ascc}, with non-sidereal peaks indicated")
+
 # Find strongest peaks
 main_frequency = peak_frequencies[0]
 main_period = periodicity.invert(main_frequency)
@@ -41,3 +45,5 @@ phase, phase_average, magnitude_average = periodicity.phase_fold(main_period, da
 
 # Phase plot
 plot.plot_phasecurve(phase, data["mag0"], data["emag0"], running_average=[phase_average, magnitude_average], title=f"ASCC {ascc} - original phase plot\nPeriod = {main_period:.4f} d", saveto="phaseplot.pdf")
+
+# Detrending
