@@ -41,8 +41,10 @@ phase, phase_average, magnitude_average = periodicity.phase_fold(main_period, da
 plot.plot_phasecurve(phase, data["mag0"], data["emag0"], running_average=[phase_average, magnitude_average], title=f"ASCC {ascc} - original phase plot\nPeriod = {main_period:.4f} d", saveto="phaseplot.pdf")
 
 # Detrending
+plot.LST_curve(data["lst"], data["mag0"], title=f"ASCC {ascc} - Local Sidereal Time trend, before")
 magnitude_detrended = periodicity.detrend(data["BJD"].data, data["mag0"].data, data["emag0"].data, data["camera"].data, main_period)
 data.add_column(magnitude_detrended)
+plot.LST_curve(data["lst"], data["magD"], title=f"ASCC {ascc} - Local Sidereal Time trend, after")
 
 # Calculate GLS
 gls = periodicity.GLS(data["BJD"], data["magD"], dy=data["emag0"])
