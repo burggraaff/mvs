@@ -67,3 +67,27 @@ phase, phase_average, magnitude_average = periodicity.phase_fold(main_period, da
 
 # Phase plot
 plot.plot_phasecurve(phase, data["magD"], data["emag0"], running_average=[phase_average, magnitude_average], title=f"ASCC {ascc} - detrended phase plot\nPeriod = {main_period:.4f} d", saveto="phaseplot_detrended.pdf")
+
+# Adjust period with MAD fitting
+period_range = np.linspace(0.995*main_period, 1.005*main_period, 250)
+mads = periodicity.phase_fold_MAD_multiple(period_range, data["BJD"].data, data["magD"].data, magnitude_uncertainty=data["emag0"].data)
+
+plt.figure(figsize=(4,3))
+plt.plot(period_range, mads, c='k')
+plt.axvline(main_period, c='k', ls=":")
+plt.xlabel("Period [d]")
+plt.ylabel("Median absolute difference [mag]")
+plt.ylim(ymin=0)
+plt.xlim(period_range.min(), period_range.max())
+plt.title(f"Goodness of fit for ASCC {ascc}")
+plt.grid(ls="--")
+plt.show()
+plt.close()
+
+main_period_new = period_range[np.nanargmin(mads)]
+print(f"Original main period: {main_period:.4g} days ; New main period: {main_period_new:.4g} days")
+
+# Phase plot
+phase, phase_average, magnitude_average = periodicity.phase_fold(main_period_new, data["BJD"].data, data["magD"].data, data["emag0"].data)
+
+plot.plot_phasecurve(phase, data["magD"], data["emag0"], running_average=[phase_average, magnitude_average], title=f"ASCC {ascc} - final phase plot\nPeriod = {main_period_new:.4f} d", saveto="phaseplot_final.pdf")

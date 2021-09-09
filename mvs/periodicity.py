@@ -188,6 +188,31 @@ def phase_fold(period, time, magnitude, magnitude_uncertainty=None, nr_bins=151,
 
     return phase, phase_average, magnitude_average
 
+
+def phase_fold_MAD(period, time, magnitude, **kwargs):
+    """
+    Phase-fold data and calculate the MAD between the trend line and data.
+    """
+    # Phase-fold
+    phase, phase_average, magnitude_average = phase_fold(period, time, magnitude, **kwargs)
+
+    # Calculate the residuals
+    residuals = difference_with_trendline(phase, magnitude, phase_average, magnitude_average)
+
+    # Calculate the MAD
+    mad = np.nanmedian(np.abs(residuals))
+    return mad
+
+
+def phase_fold_MAD_multiple(periods, time, magnitude, **kwargs):
+    """
+    Phase-fold data and calculate the MAD between the trend line and data.
+    Multiple periods at once.
+    """
+    mad = np.array([phase_fold_MAD(p, time, magnitude, **kwargs) for p in periods])
+    return mad
+
+
 def detrend(time, magnitude, uncertainty, cameras, main_period, iterations=10, threshold=0.001):
     """
     Detrend data.
