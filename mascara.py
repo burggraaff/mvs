@@ -23,14 +23,8 @@ star, data = io.read_all_data_for_one_star(data_filenames, ascc)
 gls = periodicity.GLS(data["BJD"], data["mag0"], dy=data["emag0"])
 power = gls.power(frequencies)
 
-# Plot GLS
-plot.plot_GLS(frequencies, power, title=f"Original Lomb-Scargle periodogram for ASCC {ascc}")
-
 # Find peaks in GLS
 peak_indices, peak_frequencies, peak_heights = periodicity.gls_find_peaks(frequencies, power)
-
-# Plot GLS with peaks indicated
-plot.plot_GLS(frequencies, power, peaks=(peak_frequencies, peak_heights), title=f"Original Lomb-Scargle periodogram for ASCC {ascc}, with peaks indicated")
 
 # Remove harmonics of 1 sidereal day
 peak_frequencies, peak_heights = periodicity.remove_harmonics(periodicity.siderealday_frequency, peak_frequencies, peak_heights, remove_main_frequency=True)
@@ -47,5 +41,12 @@ phase, phase_average, magnitude_average = periodicity.phase_fold(main_period, da
 plot.plot_phasecurve(phase, data["mag0"], data["emag0"], running_average=[phase_average, magnitude_average], title=f"ASCC {ascc} - original phase plot\nPeriod = {main_period:.4f} d", saveto="phaseplot.pdf")
 
 # Detrending
-magnitude_detrended = periodicity.detrend(data["BJD"].data, data["mag0"].data, data["emag0"].data, data["cameras"].data, main_period)
+magnitude_detrended = periodicity.detrend(data["BJD"].data, data["mag0"].data, data["emag0"].data, data["camera"].data, main_period)
 data.add_column(magnitude_detrended)
+
+# Calculate GLS
+gls = periodicity.GLS(data["BJD"], data["magD"], dy=data["emag0"])
+power = gls.power(frequencies)
+
+# Plot GLS
+plot.plot_GLS(frequencies, power, title=f"Post-detrending Lomb-Scargle periodogram for ASCC {ascc}")
