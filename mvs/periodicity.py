@@ -95,7 +95,17 @@ def sort_data(data_main, *data_other):
     return data_main_sorted, *data_other_sorted
 
 
-def running_average(phase_sorted, magnitude_sorted, magnitude_uncertainty_sorted=None, bin_min=0, bin_max=1, nr_bins=151, binwidth=0.025, averaging_function=np.average):
+def _average_or_nan(data, **kwargs):
+    """
+    Calculate the average, but return np.nan if an empty sample was given.
+    """
+    try:
+        return np.average(data, **kwargs)
+    except ZeroDivisionError:
+        return np.nan
+
+
+def running_average(phase_sorted, magnitude_sorted, magnitude_uncertainty_sorted=None, bin_min=0, bin_max=1, nr_bins=151, binwidth=0.025, averaging_function=_average_or_nan):
     """
     Calculate a running average.
     """
