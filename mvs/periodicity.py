@@ -194,6 +194,9 @@ def detrend(time, magnitude, uncertainty, cameras, main_period, iterations=10, t
     """
     frequencies_to_remove = [lunar_frequency, *siderealday_frequency*np.arange(1, iterations)]
 
+    # Copy the data to prevent changing it
+    magnitude = np.copy(magnitude)
+
     # Loop over the cameras and do each individually
     for camera in np.unique(cameras):
         # Get the data for this camera only

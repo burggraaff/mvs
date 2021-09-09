@@ -71,8 +71,8 @@ def plot_GLS(frequencies, power, title="Lomb-Scargle periodogram", peaks=None, s
 
 
 # Functions for consistent scatter/line plots
-scatter_phase = partial(plt.errorbar, color="k", markersize=3, linestyle="None", rasterized=True)
-line_running_average = partial(plt.plot, linewidth=2, color="yellow", path_effects=[patheffects.Stroke(linewidth=4, foreground="black"), patheffects.Normal()], zorder=10)
+scatter_kwargs = dict(color="k", markersize=1, linestyle="None", rasterized=True)
+running_average_kwargs = dict(linewidth=2, color="yellow", path_effects=[patheffects.Stroke(linewidth=4, foreground="black"), patheffects.Normal()], zorder=10)
 
 
 def plot_phasecurve(phase, magnitude, magnitude_uncertainty=None, running_average=None, symbols="o", title="Phase plot", saveto=None):
@@ -86,11 +86,11 @@ def plot_phasecurve(phase, magnitude, magnitude_uncertainty=None, running_averag
     # Scatter plot for the data
     if magnitude_uncertainty is None:
         magnitude_uncertainty = np.zeros_like(magnitude)
-    scatter_phase(phase, magnitude, yerr=magnitude_uncertainty, marker=symbols)
+    plt.errorbar(phase, magnitude, yerr=magnitude_uncertainty, marker=symbols, **scatter_kwargs)
 
     # Line plot for the running average
     if running_average is not None:
-        line_running_average(*running_average)
+        plt.plot(*running_average, **running_average_kwargs)
 
     # Plot settings
     plt.xlim(0, 1)
@@ -104,29 +104,32 @@ def plot_phasecurve(phase, magnitude, magnitude_uncertainty=None, running_averag
     _saveshow(saveto, dpi=600)
 
 
-def LST_curve(lst, magnitude, magnitude_uncertainty=None, running_average=None, symbols="o", title="Local Sidereal Time trend", saveto=None):
+def LST_curve(lst, magnitude_before, magnitude_after, magnitude_uncertainty=None, symbols="o", title="Local Sidereal Time trend", saveto=None):
     """
-    Plot the local sidereal time trend for a star.
+    Plot the local sidereal time trend for a star, before and after detrending.
     """
     # Create figure
-    plt.figure(figsize=(4,3))
+    fig, axs = plt.subplots(ncols=2, figsize=(6,4), sharex=True, sharey=True)
 
     # Scatter plot for the data
     if magnitude_uncertainty is None:
-        magnitude_uncertainty = np.zeros_like(magnitude)
-    scatter_phase(lst, magnitude, yerr=magnitude_uncertainty, marker=symbols)
-
-    # Line plot for the running average
-    if running_average is not None:
-        line_running_average(*running_average)
+        magnitude_uncertainty = np.zeros_like(lst)
+    for ax, mag in zip(axs, [magnitude_before, magnitude_after]):
+        ax.errorbar(lst, mag, yerr=magnitude_uncertainty, marker=symbols, **scatter_kwargs)
 
     # Plot settings
-    plt.xlim(0, 24)
-    plt.ylim(make_ylim(magnitude))
-    plt.xlabel("Local Sidereal Time")
-    plt.ylabel("$\Delta$ Magnitude")
-    plt.grid(ls="--")
-    plt.title(title)
+    axs[0].set_xlim(0, 24)
+    axs[0].set_ylim(make_ylim(magnitude_before))
+    axs[0].set_title(title)
+    axs[0].set_ylabel("$\Delta$ Magnitude")
+
+    for ax in axs:
+        ax.set_xlabel("Local Sidereal Time")
+        ax.grid(ls="--")
+
+    axs[0].set_title("Before")
+    axs[1].set_title("After")
+    fig.suptitle(title)
 
     # Save/show plot
     _saveshow(saveto, dpi=600)
